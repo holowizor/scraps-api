@@ -30,7 +30,13 @@ repositories {
     mavenLocal()
     jcenter()
     maven { url 'https://kotlin.bintray.com/ktor' }
-    maven { url 'https://raw.githubusercontent.com/holowizor/repository/master'}
+    maven {
+        url 'https://maven.pkg.github.com/holowizor/repository'
+        credentials {
+            username = project.findProperty("gpr.user") as String ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") as String ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
 }
 
 dependencies {
@@ -43,8 +49,8 @@ dependencies {
     compile "io.ktor:ktor-server-host-common:$ktor_version"
     compile "io.ktor:ktor-jackson:$ktor_version", withoutJacksonModule
 
-    compile "com.devbuild.commons:db-common:0.0.1"
-    compile "com.devbuild.commons:auth-common:0.0.1", withoutJacksonModule
+    compile "com.devbuild.commons:db-common:0.0.2"
+    compile "com.devbuild.commons:auth-common:0.0.2", withoutJacksonModule
 
     testCompile "io.ktor:ktor-server-tests:$ktor_version"
 }

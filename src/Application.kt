@@ -32,7 +32,6 @@ val ApplicationCall.principal get() = authentication.principal<PrincipalUser>()!
 
 val userServiceIntercom = UserServiceIntercom("http://localhost:9090")
 val scrapService = ScrapServiceImpl()
-val scrapItemService = ScrapItemServiceImpl()
 
 @Suppress("unused")
 @kotlin.jvm.JvmOverloads
@@ -70,38 +69,25 @@ fun Application.main(testing: Boolean = false) {
                     scrapService.findByAuthorId(call.principal.user.id).map { it.toDto() }
                 )
             }
-            // get scraps tree but without content for each item - needs to be fetched separately
-            get("/api/scraps-tree") {
-                // get all scraps
-                call.respond(
-                    scrapService.findByAuthorId(call.principal.user.id).map {
-                        ScrapWithItemsDto(
-                            it.toDto(),
-                            scrapItemService.findByScrapId(it.id!!).map { item -> item.toDtoNoContent() })
-                    }
-                )
-            }
             // create any level scrapId
             post("/api/scraps") {
                 validateRole(call, "admin")
 
                 val scrapDto = call.receive<ScrapDto>()
                 call.respond(
-                    scrapService.createCategory(scrapDto.name, call.principal.user.id).toDto()
+                    scrapService.createScrap(scrapDto.name, call.principal.user.id).toDto()
                 )
             }
             // get specific scrapId
             get("/api/scraps/{id}") {
                 val categoryId = call.parameters["id"]?.toLong() ?: -1L
                 call.respond(
-                    ScrapWithItemsDto(
-                        scrapService.findById(categoryId)!!.toDto(),
-                        scrapItemService.findByScrapId(categoryId).map { it.toDto() }
-                    )
+                    scrapService.findById(categoryId)!!.toDto()
                 )
             }
             // update specific scrapId
             put("/api/scraps/{id}") {
+                // TODO validate role or if owner!
                 validateRole(call, "admin")
 
                 val scrapDto = call.receive<ScrapDto>()
@@ -110,61 +96,16 @@ fun Application.main(testing: Boolean = false) {
                 if (category == null) {
                     call.respond(HttpStatusCode.NotFound)
                 } else {
-                    scrapService.updateCategory(id, scrapDto.name)
+                    scrapService.updateScrap(id, scrapDto.name, scrapDto.content)
                     call.respond(scrapService.findById(id)!!.toDto())
                 }
             }
             // delete specific scrapId
             delete("/api/scraps/{id}") {
+                // TODO validate role or if owner!
                 validateRole(call, "admin")
 
-                scrapService.deleteCategory(call.parameters["id"]?.toLong() ?: -1L)
-            }
-            // get specific content
-            get("/api/scrap-items/{id}") {
-                val itemId = call.parameters["id"]?.toLong() ?: -1L
-                val item = scrapItemService.findById(itemId)
-                if (item == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                } else {
-                    call.respond(item.toDto())
-                }
-            }
-            // create content (at any level)
-            post("/api/scrap-items") {
-                validateRole(call, "admin")
-
-                val contentDto = call.receive<ScrapItemDto>()
-                call.respond(
-                    scrapItemService.createScrapItem(
-                        contentDto.name,
-                        contentDto.content,
-                        contentDto.scrapId,
-                        call.principal.user.id
-                    ).toDto()
-                )
-            }
-            // update content (but without scrapId changing - at least for now)
-            put("/api/scrap-items/{id}") {
-                validateRole(call, "admin")
-
-                val contentDto = call.receive<ScrapItemDto>()
-                val id = call.parameters["id"]?.toLong() ?: -1L
-                val content = scrapItemService.findById(id)
-                if (content == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                } else {
-                    scrapItemService.updateScrapItem(
-                        id,
-                        contentDto.name,
-                        contentDto.content
-                    )
-                    call.respond(scrapItemService.findById(id)!!.toDto())
-                }
-            }
-            delete("/api/scrap-items/{id}") {
-                validateRole(call, "admin")
-                scrapItemService.deleteScrapItem(call.parameters["id"]?.toLong() ?: -1L)
+                scrapService.deleteScrap(call.parameters["id"]?.toLong() ?: -1L)
             }
         }
     }

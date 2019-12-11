@@ -7,17 +7,17 @@ import org.dizitart.no2.NitriteId
 import org.dizitart.no2.objects.Id
 import java.io.Serializable
 
-data class Scrap(@Id val id: Long, val name: String, val authorId: Long) : Serializable {
-    fun toDto(): ScrapDto = ScrapDto(id, name)
+data class Scrap(@Id val id: Long, val name: String, val authorId: Long, val content: String = "") : Serializable {
+    fun toDto(): ScrapDto = ScrapDto(id, name, content)
 }
 
 interface ScrapService {
     fun findAll(): Collection<Scrap>
     fun findByAuthorId(authorId: Long): Collection<Scrap>
     fun findById(id: Long): Scrap?
-    fun createCategory(name: String, authorId: Long): Scrap
-    fun updateCategory(id: Long, name: String)
-    fun deleteCategory(id: Long)
+    fun createScrap(name: String, authorId: Long): Scrap
+    fun updateScrap(id: Long, name: String, content: String)
+    fun deleteScrap(id: Long)
 }
 
 class ScrapServiceImpl : ScrapService {
@@ -30,22 +30,21 @@ class ScrapServiceImpl : ScrapService {
     override fun findById(id: Long): Scrap? =
         Database.db.getRepository<Scrap>().find(Scrap::id eq id).firstOrNull()
 
-    override fun createCategory(name: String, authorId: Long): Scrap {
-        val newCategory = Scrap(NitriteId.newId().idValue, name, authorId)
-        Database.db.getRepository<Scrap>().insert(newCategory)
-        return newCategory
+    override fun createScrap(name: String, authorId: Long): Scrap {
+        val newScrap = Scrap(NitriteId.newId().idValue, name, authorId)
+        Database.db.getRepository<Scrap>().insert(newScrap)
+        return newScrap
     }
 
-    override fun updateCategory(id: Long, name: String) {
+    override fun updateScrap(id: Long, name: String, content: String) {
         val category = findById(id)
         if (category != null) {
-            val update = category.copy(name = name)
+            val update = category.copy(name = name, content = content)
             Database.db.getRepository<Scrap>().update(Scrap::id eq id, update)
         }
     }
 
-    override fun deleteCategory(id: Long) {
+    override fun deleteScrap(id: Long) {
         Database.db.getRepository<Scrap>().remove(Scrap::id eq id)
-        Database.db.getRepository<ScrapItem>().remove(ScrapItem::scrapId eq id)
     }
 }
