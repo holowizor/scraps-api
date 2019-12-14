@@ -1,8 +1,12 @@
 package com.devbuild.api.scraps
 
+import com.devbuild.api.scraps.service.ScrapDTO
+import com.devbuild.api.scraps.service.ScrapServiceImpl
+import com.devbuild.api.scraps.service.Scraps
 import com.devbuild.commons.auth.JwtConfig
-import com.devbuild.commons.intercom.UserServiceIntercom
-import com.devbuild.commons.user.User
+import com.devbuild.commons.auth.UserApiClient
+import com.devbuild.commons.db.Database
+import com.devbuild.commons.user.UserDTO
 import com.fasterxml.jackson.databind.SerializationFeature
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
@@ -17,25 +21,33 @@ import io.ktor.features.CORS
 import io.ktor.features.ContentNegotiation
 import io.ktor.http.HttpStatusCode
 import io.ktor.jackson.jackson
+import io.ktor.request.header
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.response.respondText
 import io.ktor.routing.*
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }
 
-data class PrincipalUser(val user: User) : Principal
+data class PrincipalUser(val user: UserDTO) : Principal
+data class ScrapCreate(var name: String)
 
 val ApplicationCall.principal get() = authentication.principal<PrincipalUser>()!!
 
-val userServiceIntercom = UserServiceIntercom("http://localhost:9090")
+val userApiClient = UserApiClient("http://localhost:9090")
 val scrapService = ScrapServiceImpl()
 
 @Suppress("unused")
 @kotlin.jvm.JvmOverloads
 fun Application.main(testing: Boolean = false) {
+    Database
+    transaction {
+        SchemaUtils.create(Scraps)
+    }
 
     install(CORS) {
         anyHost()
@@ -46,8 +58,9 @@ fun Application.main(testing: Boolean = false) {
             verifier(JwtConfig.verifier)
             realm = "devbuild"
             validate {
-                val id = it.payload.getClaim("id").asLong()
-                PrincipalUser(userServiceIntercom.findById(id))
+                val authToken = this.request.header("Authorization")!!.split(" ")[1]
+                val id = it.payload.getClaim("id").asInt()
+                PrincipalUser(userApiClient.findById(id, authToken))
             }
         }
     }
@@ -66,53 +79,46 @@ fun Application.main(testing: Boolean = false) {
             // get scraps
             get("/api/scraps") {
                 call.respond(
-                    scrapService.findByAuthorId(call.principal.user.id).map { it.toDto() }
+                    scrapService.findByAuthorId(call.principal.user.id).map { it.toDTO() }
                 )
             }
             // create any level scrapId
             post("/api/scraps") {
-                validateRole(call, "admin")
-
-                val scrapDto = call.receive<ScrapDto>()
+                val scrapCreate = call.receive<ScrapCreate>()
                 call.respond(
-                    scrapService.createScrap(scrapDto.name, call.principal.user.id).toDto()
+                    scrapService.createScrap(scrapCreate.name, call.principal.user.id).toDTO()
                 )
             }
             // get specific scrapId
             get("/api/scraps/{id}") {
-                val categoryId = call.parameters["id"]?.toLong() ?: -1L
-                call.respond(
-                    scrapService.findById(categoryId)!!.toDto()
-                )
+                val scrapId = call.parameters["id"]?.toInt() ?: -1
+                val scrap = scrapService.findById(scrapId)
+                if (scrap != null) {
+                    if (scrap.authorId != call.principal.user.id) {
+                        call.respond(HttpStatusCode.NotFound)
+                    } else {
+                        call.respond(scrap.toDTO())
+                    }
+                } else {
+                    call.respond(HttpStatusCode.NotFound)
+                }
             }
             // update specific scrapId
             put("/api/scraps/{id}") {
-                // TODO validate role or if owner!
-                validateRole(call, "admin")
+                val scrapDto = call.receive<ScrapDTO>()
+                val id = call.parameters["id"]?.toInt() ?: -1
+                val scrap = scrapService.updateScrap(id, call.principal.user.id, scrapDto.name, scrapDto.content)
 
-                val scrapDto = call.receive<ScrapDto>()
-                val id = call.parameters["id"]?.toLong() ?: -1L
-                val category = scrapService.findById(id)
-                if (category == null) {
+                if (scrap == null) {
                     call.respond(HttpStatusCode.NotFound)
                 } else {
-                    scrapService.updateScrap(id, scrapDto.name, scrapDto.content)
-                    call.respond(scrapService.findById(id)!!.toDto())
+                    call.respond(scrap!!.toDTO())
                 }
             }
             // delete specific scrapId
             delete("/api/scraps/{id}") {
-                // TODO validate role or if owner!
-                validateRole(call, "admin")
-
-                scrapService.deleteScrap(call.parameters["id"]?.toLong() ?: -1L)
+                scrapService.deleteScrap(call.parameters["id"]?.toInt() ?: -1, call.principal.user.id)
             }
         }
-    }
-}
-
-suspend fun validateRole(call: ApplicationCall, role: String) {
-    if (call.principal == null || !call.principal.user.roles.contains(role)) {
-        call.respond(HttpStatusCode.Forbidden)
     }
 }
