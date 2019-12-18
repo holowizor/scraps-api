@@ -79,14 +79,14 @@ fun Application.main(testing: Boolean = false) {
             // get scraps
             get("/api/scraps") {
                 call.respond(
-                    scrapService.findByAuthorId(call.principal.user.id).map { it.toDTO() }
+                    scrapService.findByAuthorId(call.principal.user.id)
                 )
             }
             // create any level scrapId
             post("/api/scraps") {
                 val scrapCreate = call.receive<ScrapCreate>()
                 call.respond(
-                    scrapService.createScrap(scrapCreate.name, call.principal.user.id).toDTO()
+                    scrapService.createScrap(scrapCreate.name, call.principal.user.id)
                 )
             }
             // get specific scrapId
@@ -97,14 +97,14 @@ fun Application.main(testing: Boolean = false) {
                     if (scrap.authorId != call.principal.user.id) {
                         call.respond(HttpStatusCode.NotFound)
                     } else {
-                        call.respond(scrap.toDTO())
+                        call.respond(scrap)
                     }
                 } else {
                     call.respond(HttpStatusCode.NotFound)
                 }
             }
             // update specific scrapId
-            put("/api/scraps/{id}") {
+            post("/api/scraps/{id}") {
                 val scrapDto = call.receive<ScrapDTO>()
                 val id = call.parameters["id"]?.toInt() ?: -1
                 val scrap = scrapService.updateScrap(id, call.principal.user.id, scrapDto.name, scrapDto.content)
@@ -112,7 +112,7 @@ fun Application.main(testing: Boolean = false) {
                 if (scrap == null) {
                     call.respond(HttpStatusCode.NotFound)
                 } else {
-                    call.respond(scrap!!.toDTO())
+                    call.respond(scrap!!)
                 }
             }
             // delete specific scrapId

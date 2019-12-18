@@ -40,42 +40,46 @@ class Scrap(id: EntityID<Int>) : IntEntity(id) {
 }
 
 interface ScrapService {
-    fun findByAuthorId(authorId: Int): Collection<Scrap>
-    fun findById(id: Int): Scrap?
-    fun createScrap(name: String, authorId: Int): Scrap
-    fun updateScrap(id: Int, authorId: Int, name: String, content: String): Scrap?
+    fun findByAuthorId(authorId: Int): Collection<ScrapDTO>
+    fun findById(id: Int): ScrapDTO?
+    fun createScrap(name: String, authorId: Int): ScrapDTO
+    fun updateScrap(id: Int, authorId: Int, name: String, content: String): ScrapDTO?
     fun deleteScrap(id: Int, authorId: Int)
 }
 
 class ScrapServiceImpl : ScrapService {
 
-    override fun findByAuthorId(authorId: Int): Collection<Scrap> =
-        transaction { Scrap.find { Scraps.authorId eq authorId }.toList() }
+    override fun findByAuthorId(authorId: Int): Collection<ScrapDTO> =
+        transaction { Scrap.find { Scraps.authorId eq authorId }.toList().map { it.toDTO() } }
 
-    override fun findById(id: Int): Scrap? = transaction { Scrap.findById(id) }
+    private fun _findById(id: Int): Scrap? = transaction { Scrap.findById(id) }
 
-    override fun createScrap(name: String, authorId: Int): Scrap = transaction {
+    override fun findById(id: Int): ScrapDTO? = transaction { Scrap.findById(id)?.toDTO() }
+
+    override fun createScrap(name: String, authorId: Int): ScrapDTO = transaction {
         Scrap.new {
             this.name = name
             this.content = ""
             this.authorId = authorId
-        }
+        }.toDTO()
     }
 
-    override fun updateScrap(id: Int, authorId: Int, name: String, content: String): Scrap? {
-        val scrap = findById(id)
-        if (scrap != null) {
-            if (scrap.authorId != authorId) return null
-            transaction {
-                scrap.name = name
-                scrap.content = content
+    override fun updateScrap(id: Int, authorId: Int, name: String, content: String): ScrapDTO? {
+        return transaction {
+            val scrap = _findById(id)
+            if (scrap != null) {
+                if (scrap.authorId == authorId) {
+                    scrap.name = name
+                    scrap.content = content
+                }
             }
+
+            scrap?.toDTO()
         }
-        return scrap
     }
 
     override fun deleteScrap(id: Int, authorId: Int) {
-        val scrap = findById(id)
+        val scrap = _findById(id)
         if (scrap != null) {
             if (scrap.authorId != authorId) return
             transaction {
