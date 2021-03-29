@@ -28,17 +28,14 @@ import io.ktor.response.respondText
 import io.ktor.routing.*
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
-
-fun main(args: Array<String>) {
-    io.ktor.server.netty.EngineMain.main(args)
-}
+import java.io.File
 
 data class PrincipalUser(val user: UserDTO) : Principal
 data class ScrapCreate(var name: String)
 
 val ApplicationCall.principal get() = authentication.principal<PrincipalUser>()!!
 
-val userApiClient = UserApiClient("http://localhost:9090")
+val userApiClient = UserApiClient(System.getenv("AUTH_SERVICE_ADDRESS") ?: "http://localhost:9090")
 val scrapService = ScrapServiceImpl()
 
 @Suppress("unused")
@@ -73,7 +70,7 @@ fun Application.main(testing: Boolean = false) {
 
     routing {
         get("/") {
-            call.respondText("Hello, this is scraps api.")
+            call.respondText("scraps-api")
         }
         authenticate("jwt") {
             // get scraps

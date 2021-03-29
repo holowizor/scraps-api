@@ -1,7 +1,15 @@
 ARG JAVA_VERSION=8u151
+ARG DB_FILE_LOCATION="./"
+ARG DB_FILE_NAME="scraps.h2"
+ARG AUTH_SERVICE_ADDRESS="http://localhost:9090"
 
 FROM openjdk:${JAVA_VERSION}-jre
-COPY ./build/libs/*.jar /devbuild/service.jar
+
+ENV DB_FILE_LOCATION=$DB_FILE_LOCATION
+ENV DB_FILE_NAME=$DB_FILE_NAME
+ENV AUTH_SERVICE_ADDRESS=AUTH_SERVICE_ADDRESS
+
+COPY ./target/*jar-with-dependencies.jar /devbuild/service.jar
 WORKDIR /devbuild
 EXPOSE 9091
 CMD ["java","-jar","service.jar"]
