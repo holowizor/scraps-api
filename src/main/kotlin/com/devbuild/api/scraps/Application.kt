@@ -8,27 +8,17 @@ import com.devbuild.commons.auth.UserApiClient
 import com.devbuild.commons.db.Database
 import com.devbuild.commons.user.UserDTO
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.ktor.application.Application
-import io.ktor.application.ApplicationCall
-import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.auth.Authentication
-import io.ktor.auth.Principal
-import io.ktor.auth.authenticate
-import io.ktor.auth.authentication
-import io.ktor.auth.jwt.jwt
-import io.ktor.features.CORS
-import io.ktor.features.ContentNegotiation
-import io.ktor.http.HttpStatusCode
-import io.ktor.jackson.jackson
-import io.ktor.request.header
-import io.ktor.request.receive
-import io.ktor.response.respond
-import io.ktor.response.respondText
+import io.ktor.application.*
+import io.ktor.auth.*
+import io.ktor.auth.jwt.*
+import io.ktor.features.*
+import io.ktor.http.*
+import io.ktor.jackson.*
+import io.ktor.request.*
+import io.ktor.response.*
 import io.ktor.routing.*
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.io.File
 
 data class PrincipalUser(val user: UserDTO) : Principal
 data class ScrapCreate(var name: String)
@@ -49,6 +39,8 @@ fun Application.main(testing: Boolean = false) {
     install(CORS) {
         anyHost()
     }
+
+    install(CallLogging)
 
     install(Authentication) {
         jwt("jwt") {
@@ -115,6 +107,7 @@ fun Application.main(testing: Boolean = false) {
             // delete specific scrapId
             delete("/api/scraps/{id}") {
                 scrapService.deleteScrap(call.parameters["id"]?.toInt() ?: -1, call.principal.user.id)
+                call.respond(HttpStatusCode.OK)
             }
         }
     }

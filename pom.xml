@@ -6,7 +6,7 @@
 
     <artifactId>scraps-api</artifactId>
     <groupId>com.devbuild.api.scraps</groupId>
-    <version>0.0.4</version>
+    <version>0.0.5</version>
     <packaging>jar</packaging>
 
     <name>scraps-api</name>
@@ -15,6 +15,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.code.style>official</kotlin.code.style>
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
+        <ktor.version>1.6.1</ktor.version>
     </properties>
 
     <repositories>
@@ -119,22 +120,22 @@
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-core</artifactId>
-            <version>1.2.1</version>
+            <version>${ktor.version}</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-netty</artifactId>
-            <version>1.2.1</version>
+            <version>${ktor.version}</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-host-common</artifactId>
-            <version>1.2.1</version>
+            <version>${ktor.version}</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-jackson</artifactId>
-            <version>1.2.1</version>
+            <version>${ktor.version}</version>
         </dependency>
 
         <dependency>
